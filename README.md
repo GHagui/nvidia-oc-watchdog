@@ -2,7 +2,7 @@
 
 🛡️ **Automatic protection against overclock reset to prevent 12VHPWR connector melting**
 
-> 🇧🇷 [Versão em Português](README.md)
+> 🇧🇷 [Versão em Português](README.pt-BR.md)
 
 ## 🔥 Why does this project exist?
 

@@ -2,7 +2,7 @@
 
 🛡️ **Proteção automática contra reset de overclock para prevenir derretimento do conector 12VHPWR**
 
-> 🇺🇸 [English Version](./README.en.md)
+> 🇺🇸 [English Version](./README.md)
 
 ## 🔥 Por que este projeto existe?
 
