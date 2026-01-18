@@ -1,217 +1,217 @@
 # NVIDIA Overclock Monitor
 
-🛡️ **Proteção automática contra reset de overclock para prevenir derretimento do conector 12VHPWR**
+🛡️ **Automatic protection against overclock reset to prevent 12VHPWR connector melting**
 
-> 🇺🇸 [English Version](./README.en.md)
+> 🇧🇷 [Versão em Português](README.md)
 
-## 🔥 Por que este projeto existe?
+## 🔥 Why does this project exist?
 
-O conector **12VHPWR** das placas NVIDIA RTX 4000/5000 é conhecido por ter problemas de derretimento quando submetido a picos de potência. A melhor forma de prevenir isso é através de:
+The **12VHPWR** connector on NVIDIA RTX 4000/5000 cards is known for having melting issues when subjected to power spikes. The best way to prevent this is through:
 
-1. **Undervolt com curva personalizada** no MSI Afterburner
-2. **Overclock de memória** para compensar performance
-3. **Monitoramento constante** para garantir que as configurações não resetem
+1. **Undervolt with custom curve** in MSI Afterburner
+2. **Memory overclock** to compensate performance
+3. **Constant monitoring** to ensure settings don't reset
 
-### O Problema
+### The Problem
 
-O MSI Afterburner pode resetar as configurações de overclock em várias situações:
-- ✗ Reinicialização do Windows
-- ✗ Atualização de drivers NVIDIA
-- ✗ Crash do Afterburner
-- ✗ Alterações manuais acidentais
-- ✗ Conflitos com outros softwares
+MSI Afterburner can reset overclock settings in various situations:
+- ✗ Windows reboot
+- ✗ NVIDIA driver updates
+- ✗ Afterburner crashes
+- ✗ Accidental manual changes
+- ✗ Conflicts with other software
 
-Quando isso acontece, a GPU volta para as configurações stock, permitindo **picos de voltagem e potência perigosos** que podem derreter o conector 12VHPWR.
+When this happens, the GPU returns to stock settings, allowing **dangerous voltage and power spikes** that can melt the 12VHPWR connector.
 
-## ✅ A Solução
+## ✅ The Solution
 
-Este programa monitora continuamente o clock de memória da GPU para detectar se o perfil de overclock foi resetado. Se detectar que voltou ao stock:
+This program continuously monitors the GPU's memory clock to detect if the overclock profile has been reset. If it detects a return to stock:
 
-1. 🔔 **Envia alerta via Telegram**
-2. 🔄 **Reaplica automaticamente o perfil do Afterburner**
-3. ⏱️ **Aguarda estabilização e continua monitorando**
+1. 🔔 **Sends alert via Telegram**
+2. 🔄 **Automatically reapplies the Afterburner profile**
+3. ⏱️ **Waits for stabilization and continues monitoring**
 
-### 🔍 Por que monitorar o clock de memória?
+### 🔍 Why monitor memory clock?
 
-**O problema:** `nvidia-smi` não expõe informações sobre a curva de voltagem/frequência customizada. Não há como consultar diretamente se o undervolt está aplicado.
+**The problem:** `nvidia-smi` doesn't expose information about custom voltage/frequency curves. There's no way to directly query if the undervolt is applied.
 
-**A solução:** Usar o **overclock de memória como proxy de detecção**:
+**The solution:** Use **memory overclock as a detection proxy**:
 
-- Quando você aplica um perfil no Afterburner com OC de memória, o driver NVIDIA permite clocks mais altos
-- `nvidia-smi` **pode** consultar o clock atual de memória via `--query-gpu=clocks.current.memory`
-- Se o perfil resetar, o clock de memória volta para valores stock (mais baixos)
-- **Detecção indireta:** Se o clock de memória caiu = o perfil inteiro (incluindo undervolt) foi resetado
+- When you apply a profile in Afterburner with memory OC, the NVIDIA driver allows higher clocks
+- `nvidia-smi` **can** query current memory clock via `--query-gpu=clocks.current.memory`
+- If the profile resets, memory clock returns to stock values (lower)
+- **Indirect detection:** If memory clock dropped = entire profile (including undervolt) was reset
 
-**Exemplo prático:**
+**Practical example:**
 ```
-Com perfil aplicado:    17001 MHz (memória overclocked)
-Após reset do perfil:   10501 MHz (memória stock)
+With profile applied:    17001 MHz (overclocked memory)
+After profile reset:     10501 MHz (stock memory)
 ```
 
-Quando detectamos que a memória voltou ao stock, sabemos que a **curva de voltagem também resetou**, e podemos reaplicar tudo automaticamente.
+When we detect that memory returned to stock, we know that the **voltage curve also reset**, and we can automatically reapply everything.
 
-**Por isso é importante ter overclock de memória no seu perfil**, mesmo que seja apenas +100 MHz - ele serve como "canário" para detectar resets.
+**That's why it's important to have memory overclock in your profile**, even if it's just +100 MHz - it serves as a "canary" to detect resets.
 
-### 🔋 Alternativa: Usar Power Limit em vez de Memory OC
+### 🔋 Alternative: Use Power Limit instead of Memory OC
 
-**Se você não quer fazer overclock de memória**, pode usar o Power Limit como método de detecção:
+**If you don't want to overclock memory**, you can use Power Limit as the detection method:
 
-- Configure o Power Limit para **99%** ou **101%** no MSI Afterburner
-- Use `nvidia-smi --query-gpu=power.limit --format=csv,noheader,nounits` para consultar
-- Quando o perfil resetar, o Power Limit volta para 100% (stock)
+- Set Power Limit to **99%** or **101%** in MSI Afterburner
+- Use `nvidia-smi --query-gpu=power.limit --format=csv,noheader,nounits` to query
+- When the profile resets, Power Limit returns to 100% (stock)
 
-**Vantagens:**
-- ✅ Não mexe com clocks de memória
-- ✅ Funciona igualmente bem como "canário"
-- ✅ 99% pode até melhorar temperaturas levemente
+**Advantages:**
+- ✅ Doesn't touch memory clocks
+- ✅ Works equally well as a "canary"
+- ✅ 99% can even slightly improve temperatures
 
-**Para implementar:** Substitua a função `get_max_mem_clock()` por uma que consulte `power.limit` e ajuste o `MEM_CLOCK_TARGET` para 99.0 ou 101.0.
+**To implement:** Replace the `get_max_mem_clock()` function with one that queries `power.limit` and adjust `MEM_CLOCK_TARGET` to 99.0 or 101.0.
 
-## 📊 Características
+## 📊 Features
 
-- ⚡ **Extremamente leve**: Apenas ~2.1 MB de RAM
-- 🔇 **Roda silenciosamente em background** (sem janela/console)
-- 📱 **Alertas via Telegram** quando detecta problemas
-- 🔄 **Reaplicação automática** do perfil
-- ⏰ **Verificação a cada 1 hora**
-- 🚀 **Zero impacto em jogos/aplicações**
+- ⚡ **Extremely lightweight**: Only ~2.1 MB of RAM
+- 🔇 **Runs silently in background** (no window/console)
+- 📱 **Telegram alerts** when problems detected
+- 🔄 **Automatic profile reapplication**
+- ⏰ **Checks every 1 hour**
+- 🚀 **Zero impact on games/applications**
 
-## 🛠️ Instalação
+## 🛠️ Installation
 
-### Pré-requisitos
+### Prerequisites
 
-1. **MSI Afterburner** instalado
-2. **NVIDIA GPU** com drivers instalados
-3. **Bot do Telegram** (para alertas)
+1. **MSI Afterburner** installed
+2. **NVIDIA GPU** with drivers installed
+3. **Telegram Bot** (for alerts)
 
-### Configuração
+### Configuration
 
-#### 1. Clone o repositório
+#### 1. Clone the repository
 ```bash
-git clone https://github.com/seu-usuario/check_nvidia.git
+git clone https://github.com/your-username/check_nvidia.git
 cd check_nvidia
 ```
 
-#### 2. Configure o MSI Afterburner
+#### 2. Configure MSI Afterburner
 
-- Crie seu perfil com undervolt/overclock no **Perfil 1**
-- Ative "Aplicar overclock na inicialização"
-- Ative "Iniciar com o Windows"
+- Create your undervolt/overclock profile in **Profile 1**
+- Enable "Apply overclocking at system startup"
+- Enable "Start with Windows"
 
-#### 3. Descubra seu clock alvo
+#### 3. Find your target clock
 
-Execute no PowerShell **com o overclock aplicado**:
+Run in PowerShell **with overclock applied**:
 ```powershell
 nvidia-smi --query-gpu=clocks.current.memory --format=csv,noheader,nounits
 ```
 
-Anote o valor (ex: 11501 MHz) e subtraia uma margem pequena (~100 MHz).
+Note the value (e.g., 11501 MHz) and subtract a small margin (~100 MHz).
 
-#### 4. Edite o código
+#### 4. Edit the code
 
-Em `src/main.rs`, ajuste o valor alvo:
+In `src/main.rs`, adjust the target value:
 ```rust
-const MEM_CLOCK_TARGET: f64 = 11400.0; // Seu valor aqui
+const MEM_CLOCK_TARGET: f64 = 11400.0; // Your value here
 ```
 
-#### 5. Configure variáveis de ambiente
+#### 5. Configure environment variables
 
-**Crie um bot no Telegram:**
-1. Converse com [@BotFather](https://t.me/botfather)
-2. Use `/newbot` e siga as instruções
-3. Copie o **token** que ele fornecer
+**Create a Telegram bot:**
+1. Chat with [@BotFather](https://t.me/botfather)
+2. Use `/newbot` and follow instructions
+3. Copy the **token** provided
 
-**Obtenha seu Chat ID:**
-1. Converse com [@userinfobot](https://t.me/userinfobot)
-2. Copie seu **ID**
+**Get your Chat ID:**
+1. Chat with [@userinfobot](https://t.me/userinfobot)
+2. Copy your **ID**
 
-**Configure no Windows (PowerShell como Administrador):**
+**Configure on Windows (PowerShell as Administrator):**
 ```powershell
-[System.Environment]::SetEnvironmentVariable('TELEGRAM_BOT_TOKEN', 'seu_token_aqui', 'User')
-[System.Environment]::SetEnvironmentVariable('TELEGRAM_CHAT_ID', 'seu_chat_id_aqui', 'User')
+[System.Environment]::SetEnvironmentVariable('TELEGRAM_BOT_TOKEN', 'your_token_here', 'User')
+[System.Environment]::SetEnvironmentVariable('TELEGRAM_CHAT_ID', 'your_chat_id_here', 'User')
 ```
 
-**Reinicie o terminal** para as variáveis terem efeito.
+**Restart the terminal** for variables to take effect.
 
-#### 6. Compile o projeto
+#### 6. Build the project
 
 ```bash
 cargo build --release
 ```
 
-O executável estará em: `target/release/check_nvidia.exe`
+The executable will be at: `target/release/check_nvidia.exe`
 
-#### 7. Configure inicialização automática
+#### 7. Configure automatic startup
 
-1. Abra **Task Scheduler** (Agendador de Tarefas)
-2. Clique em "Create Task" (Criar Tarefa)
-3. **General**: Nome "NVIDIA Overclock Monitor"
+1. Open **Task Scheduler**
+2. Click "Create Task"
+3. **General**: Name "NVIDIA Overclock Monitor"
 4. **Triggers**: "At log on" + **Delay: 30 minutes**
-5. **Actions**: Caminho para `check_nvidia.exe`
-6. **Conditions**: Desmarque "Start only if on AC power"
-7. **Settings**: Marque "Run task as soon as possible after a scheduled start is missed"
+5. **Actions**: Path to `check_nvidia.exe`
+6. **Conditions**: Uncheck "Start only if on AC power"
+7. **Settings**: Check "Run task as soon as possible after a scheduled start is missed"
 
-## 📱 Exemplo de Alerta
+## 📱 Alert Example
 
-Quando detectado, você receberá no Telegram:
+When detected, you'll receive on Telegram:
 
 ```
-⚠️ ALERTA NVIDIA OVERCLOCK
+⚠️ NVIDIA OVERCLOCK ALERT
 
-Clock detectado: 10501 MHz
-Alvo esperado: 11400 MHz
+Detected clock: 10501 MHz
+Expected target: 11400 MHz
 
-Perfil reaplicado automaticamente.
+Profile automatically reapplied.
 ```
 
-## 🔧 Configurações Avançadas
+## 🔧 Advanced Settings
 
-### Alterar intervalo de verificação
+### Change check interval
 
-Em `src/main.rs`, linha final:
+In `src/main.rs`, final line:
 ```rust
-tokio::time::sleep(Duration::from_secs(3600)).await; // 3600 = 1 hora
+tokio::time::sleep(Duration::from_secs(3600)).await; // 3600 = 1 hour
 ```
 
-Valores recomendados:
-- `3600` - 1 hora (padrão, ideal para monitoramento diário)
-- `1800` - 30 minutos
-- `600` - 10 minutos
+Recommended values:
+- `3600` - 1 hour (default, ideal for daily monitoring)
+- `1800` - 30 minutes
+- `600` - 10 minutes
 
-### Alterar perfil do Afterburner
+### Change Afterburner profile
 
-Em `src/main.rs`:
+In `src/main.rs`:
 ```rust
 const AB_PROFILE_ARG: &str = "-profile1"; // -profile2, -profile3, etc.
 ```
 
-### Caminho customizado do Afterburner
+### Custom Afterburner path
 
 ```rust
-const AB_PATH: &str = r"C:\Caminho\Customizado\MSIAfterburner.exe";
+const AB_PATH: &str = r"C:\Custom\Path\MSIAfterburner.exe";
 ```
 
-## 🚨 Segurança
+## 🚨 Security
 
-- ✅ Credenciais do Telegram em variáveis de ambiente (não no código)
-- ✅ Não expõe informações sensíveis
-- ✅ Roda com permissões de usuário (não precisa admin)
+- ✅ Telegram credentials in environment variables (not in code)
+- ✅ Doesn't expose sensitive information
+- ✅ Runs with user permissions (doesn't need admin)
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
-Contribuições são bem-vindas! Sinta-se à vontade para:
-- 🐛 Reportar bugs
-- 💡 Sugerir features
-- 🔧 Enviar pull requests
+Contributions are welcome! Feel free to:
+- 🐛 Report bugs
+- 💡 Suggest features
+- 🔧 Submit pull requests
 
-## 📄 Licença
+## 📄 License
 
-MIT License - use livremente!
+MIT License - use freely!
 
-## ⚠️ Aviso Legal
+## ⚠️ Legal Disclaimer
 
-Este software é fornecido "como está". O uso de overclock/undervolt é por sua conta e risco. Sempre monitore temperaturas e estabilidade do sistema.
+This software is provided "as is". Use of overclock/undervolt is at your own risk. Always monitor temperatures and system stability.
 
 ---
 
-**Desenvolvido para proteger GPUs NVIDIA RTX 4000/5000 contra problemas do conector 12VHPWR** 🛡️🔥
+**Developed to protect NVIDIA RTX 4000/5000 GPUs against 12VHPWR connector issues** 🛡️🔥
